@@ -356,6 +356,66 @@ h2{font-size:12.8px; line-height:1.05; letter-spacing:-.35px; color:#0f255d} .co
   }
 }
 
+
+
+/* Special priority rule: when Western Foyer, Box Office and North Foyer are all open
+   Order is handled in JavaScript as WF → BO → NF.
+   WF and BO keep their normal expanded layouts.
+   Only North Foyer is compressed into one single horizontal row. */
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split{
+  grid-template-columns:1fr 1fr!important;
+  gap:7px!important;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .subzone{
+  width:100%!important;
+  padding:7px!important;
+  border-radius:14px!important;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .subzone-title{
+  font-size:10.5px!important;
+  margin-bottom:5px!important;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .actions{
+  grid-template-columns:repeat(3, minmax(0,1fr))!important;
+  gap:5px!important;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap{
+  min-height:48px!important;
+  font-size:7.4px!important;
+  border-radius:12px!important;
+  gap:2px!important;
+  width:100%;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap-icon{
+  width:21px!important;
+  height:21px!important;
+}
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap-icon.avatar,
+.content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap-icon.custom-access{
+  width:22px!important;
+  height:22px!important;
+}
+@media (max-width:360px){
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split{
+    gap:5px!important;
+  }
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .subzone{
+    padding:6px!important;
+  }
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .actions{
+    gap:4px!important;
+  }
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap{
+    min-height:43px!important;
+    font-size:6.6px!important;
+  }
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap-icon.avatar,
+  .content.wf-bo-nf-active .card.north-foyer-card.venue-active .subzones.split .tap-icon.custom-access{
+    width:20px!important;
+    height:20px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -490,10 +550,42 @@ document.addEventListener('DOMContentLoaded', () => {
     return h2 ? h2.textContent.trim() : '';
   }
 
+  function setupVenueClasses() {
+    content.querySelectorAll(':scope > .card, :scope > .top-grid > .card').forEach(card => {
+      const name = getTitle(card);
+      card.dataset.venue = name;
+      if (name === 'Western Foyer') card.classList.add('western-foyer-card');
+      if (name === 'Box Office') card.classList.add('box-office-card');
+      if (name === 'North Foyer') card.classList.add('north-foyer-card');
+    });
+  }
+
+  function isOn(card) {
+    return card && !card.classList.contains('venue-off');
+  }
+
+  function specialComboOn() {
+    const wf = content.querySelector('.western-foyer-card');
+    const bo = content.querySelector('.box-office-card');
+    const nf = content.querySelector('.north-foyer-card');
+    return isOn(wf) && isOn(bo) && isOn(nf);
+  }
+
+  function applySpecialComboClass() {
+    content.classList.toggle('wf-bo-nf-active', specialComboOn());
+  }
+
   function priority(card) {
     const name = getTitle(card);
 
-    // Only the two requested priority rules:
+    // Special rule: when WF, BO and NF are ON together, keep them as WF → BO → NF.
+    if (specialComboOn()) {
+      if (name === 'Western Foyer') return 30;
+      if (name === 'Box Office') return 31;
+      if (name === 'North Foyer') return 32;
+    }
+
+    // Existing priority rules for all other combinations.
     if (name === 'House Canteen') return 10;
     if (name === 'Fish Bowl') return 20;
     if (name === 'Box Office') return 30;
@@ -502,7 +594,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return 100;
   }
 
+  setupVenueClasses();
+
   function reorderVenues(animate = true) {
+    applySpecialComboClass();
     const cards = Array.from(content.querySelectorAll(':scope > .card, :scope > .top-grid > .card'));
 
     cards.forEach(card => {
